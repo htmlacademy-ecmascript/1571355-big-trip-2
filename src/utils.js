@@ -8,7 +8,7 @@ function capitalize(value) {
   return `${value[0].toUpperCase()}${value.slice(1)}`;
 }
 
-function getFilteredPoints(points, filterType) {
+function filterPoints(points, filterType) {
   const currentDate = new Date();
 
   switch (filterType) {
@@ -29,8 +29,8 @@ function getFilteredPoints(points, filterType) {
 function generateFilters(points) {
   return Object.values(FilterType).map((filterType) => ({
     type: filterType,
-    isDisabled: filterType !== FilterType.EVERYTHING && getFilteredPoints(points, filterType).length === 0,
+    isDisabled: filterType !== FilterType.EVERYTHING && filterPoints(points, filterType).length === 0,
   }));
 }
 
-export { getRandomArrayElement, capitalize, getFilteredPoints, generateFilters };
+export { getRandomArrayElement, capitalize, filterPoints, generateFilters };

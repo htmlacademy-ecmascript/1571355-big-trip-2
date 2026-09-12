@@ -1,9 +1,9 @@
 import { render, remove, replace } from '../framework/render.js';
-import { FilterType } from '../const.js';
-import { getFilteredPoints } from '../utils.js';
+import { FilterType, NoPointTextType } from '../const.js';
+import { filterPoints } from '../utils.js';
 import EventEditView from '../view/event-edit-view.js';
 import EventItemView from '../view/event-item-view.js';
-import NoPointView from '../view/no-point-view.js';
+import MessageView from '../view/message-view.js';
 import TripListView from '../view/trip-list-view.js';
 
 export default class TripPresenter {
@@ -23,7 +23,7 @@ export default class TripPresenter {
   //Запускает отрисовку списка.
 
   init(filterType = FilterType.EVERYTHING) {
-    this.points = getFilteredPoints(this.pointsModel.points, filterType);
+    this.points = filterPoints(this.pointsModel.points, filterType);
     this.destinations = [...this.pointsModel.destinations];
     this.offers = [...this.pointsModel.offers];
     this.clearEventsList();
@@ -44,7 +44,9 @@ export default class TripPresenter {
 
   renderEventsList(filterType) {
     if (this.points.length === 0) {
-      this.noPointComponent = new NoPointView({ filterType });
+      this.noPointComponent = new MessageView({
+        message: NoPointTextType[filterType],
+      });
       render(this.noPointComponent, this.tripEventsContainer);
       return;
     }
