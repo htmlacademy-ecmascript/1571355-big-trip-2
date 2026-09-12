@@ -1,13 +1,15 @@
 import AbstractView from '../framework/view/abstract-view.js';
 import { capitalize } from '../utils.js';
 
-function createFilterItemTemplate(filterType, currentFilterType) { //берет один тип фильтра и превращает его в один кусочек HTML с radio-кнопкой и label.
-  const isChecked = filterType === currentFilterType ? 'checked' : '';
+function createFilterItemTemplate(filterItem, currentFilterType) { //берет один тип фильтра и превращает его в один кусочек HTML с radio-кнопкой и label.
+  const { type, isDisabled } = filterItem;
+  const isChecked = type === currentFilterType ? 'checked' : '';
+  const isDisabledAttribute = isDisabled ? 'disabled' : '';
 
   return (
     `<div class="trip-filters__filter">
-      <input id="filter-${filterType}" class="trip-filters__filter-input visually-hidden" type="radio" name="trip-filter" value="${filterType}" ${isChecked}>
-      <label class="trip-filters__filter-label" for="filter-${filterType}">${capitalize(filterType)}</label>
+      <input id="filter-${type}" class="trip-filters__filter-input visually-hidden" type="radio" name="trip-filter" value="${type}" ${isChecked} ${isDisabledAttribute}>
+      <label class="trip-filters__filter-label" for="filter-${type}">${capitalize(type)}</label>
     </div>`
   ) ;
 }

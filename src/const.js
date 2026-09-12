@@ -7,6 +7,13 @@ const FilterType = {
   PAST: 'past',
 };
 
+const NoPointTextType = {
+  [FilterType.EVERYTHING]: 'Click New Event to create your first point',
+  [FilterType.FUTURE]: 'There are no future events now',
+  [FilterType.PRESENT]: 'There are no present events now',
+  [FilterType.PAST]: 'There are no past events now',
+};
+
 const SortType = {
   DAY: 'day',
   EVENT: 'event',
@@ -29,4 +36,4 @@ const EventTypes = [
 
 const DEFAULT_EVENT_TYPE = 'flight';
 
-export { POINTS_COUNT, FilterType, SortType, EventTypes, DEFAULT_EVENT_TYPE };
+export { POINTS_COUNT, FilterType, NoPointTextType, SortType, EventTypes, DEFAULT_EVENT_TYPE };

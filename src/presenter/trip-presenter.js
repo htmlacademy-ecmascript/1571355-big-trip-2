@@ -1,10 +1,14 @@
-import { render, replace } from '../framework/render.js';
+import { render, remove, replace } from '../framework/render.js';
+import { FilterType, NoPointTextType } from '../const.js';
+import { filterPoints } from '../utils.js';
 import EventEditView from '../view/event-edit-view.js';
 import EventItemView from '../view/event-item-view.js';
+import MessageView from '../view/message-view.js';
 import TripListView from '../view/trip-list-view.js';
 
 export default class TripPresenter {
-  tripListComponent = new TripListView();//создает экземпляр класса TripListView, который создает ul с классом trip-events__list  return '<ul class="trip-events__list"></ul>';
+  tripListComponent = null;
+  noPointComponent = null;
 
   constructor({ tripEventsContainer, pointsModel }) {
     this.tripEventsContainer = tripEventsContainer; // куда tripEventsContainer = document.querySelector('.trip-events');<section class="trip-events">
@@ -18,14 +22,36 @@ export default class TripPresenter {
   //Копирует их в this.points.
   //Запускает отрисовку списка.
 
-  init() {
-    this.points = [...this.pointsModel.points];
+  init(filterType = FilterType.EVERYTHING) {
+    this.points = filterPoints(this.pointsModel.points, filterType);
     this.destinations = [...this.pointsModel.destinations];
     this.offers = [...this.pointsModel.offers];
-    this.renderEventsList();
+    this.clearEventsList();
+    this.renderEventsList(filterType);
   }
 
-  renderEventsList() {
+  clearEventsList() {
+    remove(this.tripListComponent);
+    remove(this.noPointComponent);
+
+    this.pointComponents.forEach(({ eventItemComponent, eventEditComponent, escKeyDownHandler }) => {
+      document.removeEventListener('keydown', escKeyDownHandler);
+      remove(eventItemComponent);
+      remove(eventEditComponent);
+    });
+    this.pointComponents = [];
+  }
+
+  renderEventsList(filterType) {
+    if (this.points.length === 0) {
+      this.noPointComponent = new MessageView({
+        message: NoPointTextType[filterType],
+      });
+      render(this.noPointComponent, this.tripEventsContainer);
+      return;
+    }
+
+    this.tripListComponent = new TripListView();
     render(this.tripListComponent, this.tripEventsContainer);//отрисовывает ul с классом trip-events__list в section class="trip-events"
 
     for (const point of this.points) {
@@ -65,6 +91,7 @@ export default class TripPresenter {
       this.pointComponents.push({
         eventItemComponent,
         eventEditComponent,
+        escKeyDownHandler,
       });
 
       render(eventItemComponent, this.tripListComponent.element);

@@ -8,15 +8,19 @@ const tripEventsContainer = document.querySelector('.trip-events');
 
 const pointsModel = new PointsModel();
 
-const filterPresenter = new FilterPresenter({
-  filtersContainer,
-});
-const sortPresenter = new SortPresenter({
-  tripEventsContainer,
-});
 const tripPresenter = new TripPresenter({
   tripEventsContainer,
   pointsModel,
+});
+const filterPresenter = new FilterPresenter({
+  filtersContainer,
+  pointsModel,
+  onFilterTypeChange: (filterType) => {
+    tripPresenter.init(filterType);
+  },
+});
+const sortPresenter = new SortPresenter({
+  tripEventsContainer,
 });
 
 filterPresenter.init();
