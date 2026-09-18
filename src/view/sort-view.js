@@ -12,8 +12,8 @@ function createSortItemTemplate(sortType, currentSortType) {
 
   return (
     `<div class="trip-sort__item trip-sort__item--${sortType}">
-      <input id="sort-${sortType}" class="trip-sort__input visually-hidden" type="radio" name="trip-sort" value="sort-${sortType}" ${isChecked} ${isDisabled}>
-      <label class="trip-sort__btn" for="sort-${sortType}">${getSortName(sortType)}</label>
+      <input id="sort-${sortType}" class="trip-sort__input visually-hidden" type="radio" name="trip-sort" value="${sortType}" data-sort-type="${sortType}" ${isChecked} ${isDisabled}>
+      <label class="trip-sort__btn" for="sort-${sortType}" data-sort-type="${sortType}">${getSortName(sortType)}</label>
     </div>`
   );
 }
@@ -33,15 +33,36 @@ function createSortTemplate(sortItems, currentSortType) {
 export default class SortView extends AbstractView {
   #sortItems = null;
   #currentSortType = null;
+  #onSortTypeChange = null;
 
-  constructor({ sortItems, currentSortType }) {
+  constructor({ sortItems, currentSortType, onSortTypeChange }) {
     super();
     this.#sortItems = sortItems;
     this.#currentSortType = currentSortType;
+    this.#onSortTypeChange = onSortTypeChange;
+
+    this.element.addEventListener('click', this.#sortTypeClickHandler);
   }
 
   get template() {
     return createSortTemplate(this.#sortItems, this.#currentSortType);
   }
 
+  #sortTypeClickHandler = (evt) => {
+    const sortElement = evt.target.closest('.trip-sort__btn');
+
+    if (!sortElement) {
+      return;
+    }
+
+    evt.preventDefault();
+
+    const input = this.element.querySelector(`#sort-${sortElement.dataset.sortType}`);
+
+    if (input.disabled) {
+      return;
+    }
+
+    this.#onSortTypeChange(sortElement.dataset.sortType);
+  };
 }
