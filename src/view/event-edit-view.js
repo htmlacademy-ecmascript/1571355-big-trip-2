@@ -166,7 +166,7 @@ function createEventEditTemplate({ state, destinations, offers }) {
               <span class="visually-hidden">Price</span>
               &euro;
             </label>
-            <input class="event__input  event__input--price" id="event-price-${id}" type="text" name="event-price" value="${price}">
+            <input class="event__input  event__input--price" id="event-price-${id}" type="text" inputmode="numeric" pattern="[0-9]*" name="event-price" value="${price}">
           </div>
 
           <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
@@ -191,17 +191,19 @@ export default class EventEditView extends AbstractStatefulView {
   #offers = null;
   #onFormSubmit = null;
   #onRollupClick = null;
+  #onDeleteClick = null;
   #datepickerFrom = null;
   #datepickerTo = null;
   #isDatepickerActive = false;
 
-  constructor({ point, destinations, offers, onFormSubmit, onRollupClick }) {
+  constructor({ point, destinations, offers, onFormSubmit, onRollupClick, onDeleteClick }) {
     super();
     this._setState(EventEditView.parsePointToState(point));
     this.#destinations = destinations;
     this.#offers = offers;
     this.#onFormSubmit = onFormSubmit;
     this.#onRollupClick = onRollupClick;
+    this.#onDeleteClick = onDeleteClick;
 
     this._restoreHandlers();
   }
@@ -219,6 +221,8 @@ export default class EventEditView extends AbstractStatefulView {
       .addEventListener('submit', this.#formSubmitHandler);
     this.element.querySelector('.event__rollup-btn')
       .addEventListener('click', this.#rollupClickHandler);
+    this.element.querySelector('.event__reset-btn')
+      .addEventListener('click', this.#deleteClickHandler);
     this.element.querySelector('.event__type-group')
       .addEventListener('change', this.#eventTypeChangeHandler);
     this.element.querySelector('.event__input--destination')
@@ -238,7 +242,10 @@ export default class EventEditView extends AbstractStatefulView {
   }
 
   static parseStateToPoint(state) {
-    return structuredClone(state);
+    return {
+      ...structuredClone(state),
+      price: Number(state.price),
+    };
   }
 
   removeElement() {
@@ -258,12 +265,23 @@ export default class EventEditView extends AbstractStatefulView {
 
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
+
+    if (!this.#isDestinationValid()) {
+      this.shake();
+      return;
+    }
+
     this.#onFormSubmit(EventEditView.parseStateToPoint(this._state));
   };
 
   #rollupClickHandler = (evt) => {
     evt.preventDefault();
     this.#onRollupClick();
+  };
+
+  #deleteClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#onDeleteClick(EventEditView.parseStateToPoint(this._state));
   };
 
   #eventTypeChangeHandler = (evt) => {
@@ -281,6 +299,9 @@ export default class EventEditView extends AbstractStatefulView {
     const selectedDestination = this.#destinations.find((destination) => destination.name === evt.target.value);
 
     if (!selectedDestination) {
+      this._setState({
+        destination: null,
+      });
       return;
     }
 
@@ -344,11 +365,20 @@ export default class EventEditView extends AbstractStatefulView {
 
   #priceInputHandler = (evt) => {
     evt.preventDefault();
+    const price = evt.target.value.replace(/\D/g, '');
+
+    evt.target.value = price;
 
     this._setState({
-      price: evt.target.value,
+      price: Number(price),
     });
   };
+
+  #isDestinationValid() {
+    const destinationValue = this.element.querySelector('.event__input--destination').value;
+
+    return this.#destinations.some((destination) => destination.name === destinationValue);
+  }
 
   #offerChangeHandler = () => {
     const availableOffers = this.#offers.find((offerItem) => offerItem.type === this._state.type)?.offers ?? [];

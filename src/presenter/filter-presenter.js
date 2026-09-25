@@ -1,31 +1,38 @@
-import { render } from '../framework/render.js';
+import { render, remove } from '../framework/render.js';
 import FilterView from '../view/filter-view.js';
-import { FilterType } from '../const.js';
 import { generateFilters } from '../utils.js';
-
-const DEFAULT_FILTER_TYPE = FilterType.EVERYTHING;
 
 //  создание класса FilterPresenter, который будет отвечать за отображение фильтров на странице.
 export default class FilterPresenter {
-  constructor({ filtersContainer, pointsModel, onFilterTypeChange }) {
+  filterComponent = null;
+
+  constructor({ filtersContainer, pointsModel, filterModel, onFilterTypeChange }) {
     this.filtersContainer = filtersContainer;
     this.pointsModel = pointsModel;
+    this.filterModel = filterModel;
     this.onFilterTypeChange = onFilterTypeChange;
-    this.currentFilterType = DEFAULT_FILTER_TYPE;
   }
 
   init() {
-    const filters = generateFilters(this.pointsModel.points);
+    const filters = generateFilters(this.pointsModel.getPoints());
 
-    render(new FilterView({
+    remove(this.filterComponent);
+
+    this.filterComponent = new FilterView({
       filters,
-      currentFilterType: this.currentFilterType,
+      currentFilterType: this.filterModel.getFilter(),
       onFilterTypeChange: this.handleFilterTypeChange,
-    }), this.filtersContainer);
+    });
+
+    render(this.filterComponent, this.filtersContainer);
   }
 
   handleFilterTypeChange = (filterType) => {
-    this.currentFilterType = filterType;
-    this.onFilterTypeChange(filterType);
+    if (this.filterModel.getFilter() === filterType) {
+      return;
+    }
+
+    this.filterModel.setFilter(filterType);
+    this.onFilterTypeChange();
   };
 }

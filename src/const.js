@@ -36,4 +36,10 @@ const EventTypes = [
 
 const DEFAULT_EVENT_TYPE = 'flight';
 
-export { POINTS_COUNT, FilterType, NoPointTextType, SortType, EventTypes, DEFAULT_EVENT_TYPE };
+const UserAction = {
+  UPDATE_POINT: 'UPDATE_POINT',
+  ADD_POINT: 'ADD_POINT',
+  DELETE_POINT: 'DELETE_POINT',
+};
+
+export { POINTS_COUNT, FilterType, NoPointTextType, SortType, EventTypes, DEFAULT_EVENT_TYPE, UserAction };

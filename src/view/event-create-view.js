@@ -1,6 +1,18 @@
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import { EventTypes, DEFAULT_EVENT_TYPE } from '../const.js';
 import { capitalize } from '../utils.js';
+import dayjs from 'dayjs';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
+
+const DateFormat = {
+  EDIT: 'DD/MM/YY HH:mm',
+  FLATPICKR: 'd/m/y H:i',
+};
+
+function humanizeDateTime(date) {
+  return date ? dayjs(date).format(DateFormat.EDIT) : '';
+}
 
 function createEventTypeTemplate(eventType, currentType, pointId) {
   const isChecked = eventType === currentType ? 'checked' : '';
@@ -143,10 +155,10 @@ function createEventCreateTemplate({ state, destinations, offers }) {
 
           <div class="event__field-group  event__field-group--time">
             <label class="visually-hidden" for="event-start-time-${id}">From</label>
-            <input class="event__input  event__input--time" id="event-start-time-${id}" type="text" name="event-start-time" value="${dateFrom}">
+            <input class="event__input  event__input--time" id="event-start-time-${id}" type="text" name="event-start-time" value="${humanizeDateTime(dateFrom)}">
             &mdash;
             <label class="visually-hidden" for="event-end-time-${id}">To</label>
-            <input class="event__input  event__input--time" id="event-end-time-${id}" type="text" name="event-end-time" value="${dateTo}">
+            <input class="event__input  event__input--time" id="event-end-time-${id}" type="text" name="event-end-time" value="${humanizeDateTime(dateTo)}">
           </div>
 
           <div class="event__field-group  event__field-group--price">
@@ -154,7 +166,7 @@ function createEventCreateTemplate({ state, destinations, offers }) {
               <span class="visually-hidden">Price</span>
               &euro;
             </label>
-            <input class="event__input  event__input--price" id="event-price-${id}" type="text" name="event-price" value="${price}">
+            <input class="event__input  event__input--price" id="event-price-${id}" type="text" inputmode="numeric" pattern="[0-9]*" name="event-price" value="${price}">
           </div>
 
           <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
@@ -174,12 +186,19 @@ function createEventCreateTemplate({ state, destinations, offers }) {
 export default class EventCreateView extends AbstractStatefulView {
   #destinations = null;
   #offers = null;
+  #onFormSubmit = null;
+  #onCancelClick = null;
+  #datepickerFrom = null;
+  #datepickerTo = null;
+  #isDatepickerActive = false;
 
-  constructor({ destinations, offers, pointId }) {
+  constructor({ destinations, offers, pointId, onFormSubmit, onCancelClick }) {
     super();
     this._setState(EventCreateView.parsePointToState(pointId));
     this.#destinations = destinations;
     this.#offers = offers;
+    this.#onFormSubmit = onFormSubmit;
+    this.#onCancelClick = onCancelClick;
 
     this._restoreHandlers();
   }
@@ -193,31 +212,74 @@ export default class EventCreateView extends AbstractStatefulView {
   }
 
   _restoreHandlers() {
+    this.element.querySelector('form')
+      .addEventListener('submit', this.#formSubmitHandler);
+    this.element.querySelector('.event__reset-btn')
+      .addEventListener('click', this.#cancelClickHandler);
     this.element.querySelector('.event__type-group')
       .addEventListener('change', this.#eventTypeChangeHandler);
     this.element.querySelector('.event__input--destination')
       .addEventListener('input', this.#destinationInputHandler);
-    this.element.querySelector('[name="event-start-time"]')
-      .addEventListener('input', this.#dateFromInputHandler);
-    this.element.querySelector('[name="event-end-time"]')
-      .addEventListener('input', this.#dateToInputHandler);
     this.element.querySelector('.event__input--price')
       .addEventListener('input', this.#priceInputHandler);
     this.element.querySelectorAll('.event__offer-checkbox')
       .forEach((offerElement) => offerElement.addEventListener('change', this.#offerChangeHandler));
+
+    if (this.#isDatepickerActive) {
+      this.#setDatepickers();
+    }
   }
 
   static parsePointToState(pointId) {
     return {
       id: pointId,
       type: DEFAULT_EVENT_TYPE,
-      price: '',
+      price: 0,
       destination: null,
-      dateFrom: '',
-      dateTo: '',
+      dateFrom: null,
+      dateTo: null,
       offers: [],
+      isFavorite: false,
     };
   }
+
+  static parseStateToPoint(state) {
+    return {
+      ...structuredClone(state),
+      price: Number(state.price),
+    };
+  }
+
+  removeElement() {
+    this.#destroyDatepickers();
+    super.removeElement();
+  }
+
+  initDatepickers() {
+    this.#isDatepickerActive = true;
+    this.#setDatepickers();
+  }
+
+  destroyDatepickers() {
+    this.#isDatepickerActive = false;
+    this.#destroyDatepickers();
+  }
+
+  #formSubmitHandler = (evt) => {
+    evt.preventDefault();
+
+    if (!this.#isDestinationValid() || !this._state.dateFrom || !this._state.dateTo) {
+      this.shake();
+      return;
+    }
+
+    this.#onFormSubmit(EventCreateView.parseStateToPoint(this._state));
+  };
+
+  #cancelClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#onCancelClick();
+  };
 
   #eventTypeChangeHandler = (evt) => {
     evt.preventDefault();
@@ -234,6 +296,9 @@ export default class EventCreateView extends AbstractStatefulView {
     const selectedDestination = this.#destinations.find((destination) => destination.name === evt.target.value);
 
     if (!selectedDestination) {
+      this._setState({
+        destination: null,
+      });
       return;
     }
 
@@ -242,29 +307,22 @@ export default class EventCreateView extends AbstractStatefulView {
     });
   };
 
-  #dateFromInputHandler = (evt) => {
-    evt.preventDefault();
-
-    this._setState({
-      dateFrom: evt.target.value,
-    });
-  };
-
-  #dateToInputHandler = (evt) => {
-    evt.preventDefault();
-
-    this._setState({
-      dateTo: evt.target.value,
-    });
-  };
-
   #priceInputHandler = (evt) => {
     evt.preventDefault();
+    const price = evt.target.value.replace(/\D/g, '');
+
+    evt.target.value = price;
 
     this._setState({
-      price: evt.target.value,
+      price: Number(price),
     });
   };
+
+  #isDestinationValid() {
+    const destinationValue = this.element.querySelector('.event__input--destination').value;
+
+    return this.#destinations.some((destination) => destination.name === destinationValue);
+  }
 
   #offerChangeHandler = () => {
     const availableOffers = this.#offers.find((offerItem) => offerItem.type === this._state.type)?.offers ?? [];
@@ -273,6 +331,59 @@ export default class EventCreateView extends AbstractStatefulView {
 
     this._setState({
       offers: availableOffers.filter((offer) => checkedOfferIds.includes(offer.id)),
+    });
+  };
+
+  #setDatepickers() {
+    this.#destroyDatepickers();
+
+    this.#datepickerFrom = flatpickr(
+      this.element.querySelector('[name="event-start-time"]'),
+      {
+        dateFormat: DateFormat.FLATPICKR,
+        defaultDate: this._state.dateFrom,
+        enableTime: true,
+        'time_24hr': true,
+        onChange: this.#dateFromChangeHandler,
+      },
+    );
+
+    this.#datepickerTo = flatpickr(
+      this.element.querySelector('[name="event-end-time"]'),
+      {
+        dateFormat: DateFormat.FLATPICKR,
+        defaultDate: this._state.dateTo,
+        enableTime: true,
+        minDate: this._state.dateFrom,
+        'time_24hr': true,
+        onChange: this.#dateToChangeHandler,
+      },
+    );
+  }
+
+  #destroyDatepickers() {
+    this.#datepickerFrom?.destroy();
+    this.#datepickerFrom = null;
+
+    this.#datepickerTo?.destroy();
+    this.#datepickerTo = null;
+  }
+
+  #dateFromChangeHandler = ([userDate]) => {
+    const dateTo = !this._state.dateTo || userDate > this._state.dateTo ? userDate : this._state.dateTo;
+
+    this._setState({
+      dateFrom: userDate,
+      dateTo,
+    });
+
+    this.#datepickerTo.set('minDate', userDate);
+    this.#datepickerTo.setDate(dateTo);
+  };
+
+  #dateToChangeHandler = ([userDate]) => {
+    this._setState({
+      dateTo: userDate,
     });
   };
 

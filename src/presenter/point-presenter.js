@@ -1,4 +1,5 @@
 import { render, remove, replace } from '../framework/render.js';
+import { UserAction } from '../const.js';
 import EventEditView from '../view/event-edit-view.js';
 import EventItemView from '../view/event-item-view.js';
 
@@ -46,6 +47,7 @@ export default class PointPresenter {
       offers: this.#offers,
       onFormSubmit: this.#formSubmitHandler,
       onRollupClick: this.#replaceFormToCard,
+      onDeleteClick: this.#deleteClickHandler,
     });
 
     if (prevEventItemComponent === null || prevEventEditComponent === null) {
@@ -94,13 +96,17 @@ export default class PointPresenter {
   };
 
   #favoriteClickHandler = () => {
-    this.#onDataChange({
+    this.#onDataChange(UserAction.UPDATE_POINT, {
       ...this.#point,
       isFavorite: !this.#point.isFavorite,
     });
   };
 
   #formSubmitHandler = (updatedPoint) => {
-    this.#onDataChange(updatedPoint);
+    this.#onDataChange(UserAction.UPDATE_POINT, updatedPoint);
+  };
+
+  #deleteClickHandler = (point) => {
+    this.#onDataChange(UserAction.DELETE_POINT, point);
   };
 }
